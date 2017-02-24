@@ -1,0 +1,18 @@
+{ "members" :[
+    { "name" :"member 1", "components" : [ "c1", "c2", "c7" ], "connections" : [ "p1", "p2", "p7" ] },
+    { "name" :"member 2", "components" : [ "c3", "c2", "c8" ], "connections" : [ "p2", "p2", "p8" ] },
+    { "name" :"member3", "components" : [ "c4", "c2", "c9" ], "connections" : [ "p3", "p2", "p9" ] },
+    { "name" :"member 4 5", "components" : [ "c5", "c2", "c10" ], "connections" : [ "p4", "p2", "p10" ] },
+    { "name" :"member5", "components" : [ "c6", "c11 morgan direct" ], "connections" : [ "p5", "p19", "p11" ] } ],
+  "components" : [
+    { "name" : "c1", "applications" : [
+        { "name" : "application1", "business" : "credit"}
+      ]
+    }
+  ],
+  "connections" : [
+    { "name" : "p1", "business" : "commodities", "connections" : [ "p2", "p3" ] }
+  ]
+}
+
+

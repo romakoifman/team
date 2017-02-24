@@ -1,0 +1,67 @@
+svg {
+  font-family: Abel,"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size: 10px;
+}
+
+text {
+    pointer-events: none;
+}
+
+.member_node rect {
+    pointer-events: all;
+    fill: #000;
+}
+
+.member_node text {
+    fill: #fff;
+}
+
+.member_node rect.highlight {
+    fill: #2B83FF;
+    stroke: #315B7E;
+    stroke-width: 2px;
+}
+
+.outer_node circle {
+    fill: #aaa;
+    stroke: steelblue;
+    stroke-width: 1.5px;
+    pointer-events: all;
+}
+
+.outer_node circle.highlight
+{
+    fill: #2B83FF;
+    stroke: #315B7E;
+    stroke-width: 2px;
+}
+
+.link {
+    fill: none;
+    stroke: #aaa;
+    stroke-width: 2px;
+    opacity: 0.4;
+}
+
+.link .highlight{
+    fill: none;
+    stroke: #2B83FF;
+    stroke-width: 5px;
+}
+
+/*
+.node {
+  cursor: pointer;
+}
+
+.node circle {
+  fill: #fff;
+  stroke: steelblue;
+  stroke-width: 1.5px;
+}
+
+.node text {
+  font: 10px sans-serif;
+} */
+
+/* http://www.findtheconversation.com/wp-content/themes/conversation_theme/style.css?ver=1 */

@@ -6,6 +6,15 @@ function createTeamPresentation() {
     var displayDelay = 1000;
     var ease = "elastic";
     var linkWidth = 1.5;
+    var i = 0;
+    var duration = 750;
+    var R = 190;
+    var margin = { top: 20, right: 120, bottom: 20, left: 120 };
+    var height = 800 - margin.top - margin.bottom;
+    var treeRoot = null;
+    var tree = d3.layout.tree()
+                        .size([360, diameter / 2 - 80])
+                        .separation(function(a, b) { return (a.parent == b.parent ? 1 : 2) / a.depth; });
 
     d3.json( "data.json", function( jsonData ) {
         var members = [];
@@ -219,7 +228,7 @@ function createTeamPresentation() {
             if ( !( hashDetails[0] in jsonData ) || !( hashDetails[1] in jsonData[ hashDetails[0]] ) )
                 return;
 
-            var root = { name : jsonData[hashDetails[0]][hashDetails[1]].fullname };
+            treeRoot = { name : jsonData[hashDetails[0]][hashDetails[1]].fullname, level : 0 };
             if ( hashDetails[0] == "members" ) {
                 var children = [];
                 var connections = jsonData[hashDetails[0]][hashDetails[1]].connections;
@@ -232,95 +241,268 @@ function createTeamPresentation() {
                         var business = "unset";
                     }
 
-                    children.push( { name: business, children :
-                                        [ { name: connectionName, children : [] } ] } );
+                    children.push( { name: business, level : 1, children :
+                                        [ { name: connectionName, level : 2, children : [
+                                                                            { name: 'test', level : 3, children : [] },
+                                                                            { name: 'test1', level : 3, children : [] },
+                                                                            { name: 'test2', level : 3, children : [] },
+                                                                            { name: 'test', level : 3, children : [] },
+                                                                            { name: 'test1', level : 3, children : [] },
+                                                                            { name: 'test2', level : 3, children : [] },
+                                                                            { name: 'test', level : 3, children : [] },
+                                                                            { name: 'test1', level : 3, children : [] },
+                                                                            { name: 'test2', level : 3, children : [] },
+                                                                            { name: 'test', level : 3, children : [] },
+                                                                            { name: 'test1', level : 3, children : [] },
+                                                                            { name: 'test2', level : 3, children : [] },
+                                                                            { name: 'test', level : 3, children : [] },
+                                                                            { name: 'test1', level : 3, children : [] },
+                                                                            { name: 'test2', level : 3, children : [] },
+                                                                            { name: 'test3', level : 3, children : [] },
+                                                                             ] } ] } );
                 }
-                root[ 'children'] = children;
+                treeRoot[ 'children'] = children;
             }
 
-            var i = 0,
-            duration = 750;
-            R = 110;
-            var margin = { top: 20, right: 120, bottom: 20, left: 120 };
-            var height = 800 - margin.top - margin.bottom;
-
-            var tree = d3.layout.tree()
-                .size([360, diameter / 2 - R])
-                .separation(function(a, b) { return (a.parent == b.parent ? 1 : 2) / a.depth; });
-
-            var svg = d3.select("body").append("div")
-                                        .attr("id", "hash" )
-                                        .append("svg")
-                                        .attr("width", diameter )
-                                        .attr("height", diameter )
-                                        .append("g")
-                                        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-            var source = root;
-            var nodes = tree.nodes(root).reverse();
-            var links = tree.links(nodes);
-
-            function project(x, y) {
-              var angle = (x - 90) / 180 * Math.PI, radius = y;
-              return [radius * Math.cos(angle)+300, radius * Math.sin(angle)+300];
+            function collapse(d) {
+                if ( d.children ) {
+                    d.children.forEach(collapse);
+                    if ( d.level > 1 ) {
+                        d._children = d.children;
+                        d.children = null;
+                    }
+                }
             }
 
+            treeRoot.x0 = 400;
+            treeRoot.y0 = 0;
+
+            treeRoot.children.forEach(collapse);
+
+            d3.select("body").append("div")
+                             .attr("id", "hash" )
+                             .append("svg")
+                             .attr("width", diameter )
+                             .attr("height", diameter )
+                             .append("g")
+                             .attr( "id", "svg.g")
+                             .attr("transform", "translate(" + diameter / 2 + "," + diameter / 2 + ")");
+
+            update(treeRoot);
+        }
+
+        var diagonal = d3.svg.diagonal.radial()
+            .projection(function(d) { return [d.y, d.x / 180 * Math.PI]; });
+
+        function update(source) {
+
+            var canvas = d3.select("g");
+
+            // Compute the new tree layout.
+            var nodes = tree.nodes(treeRoot),
+                links = tree.links(nodes);
+
+            // Normalize for fixed-depth.
+            nodes.forEach(function(d) { d.y = d.depth * 110; });
+
+            // Update the nodes…
+            var node = canvas.selectAll("g.node")
+                             .data(nodes, function(d) { return d.id || (d.id = ++i); });
+
+            // Enter any new nodes at the parent's previous position.
+            var nodeEnter = node.enter()
+                                .append("g")
+                                .attr("class", "node")
+                                 //.attr("transform", function(d) { return "rotate(" + (d.x - 90) + ")translate(" + d.y + ")"; })
+                                 .on("click", nodeClick);
+
+            nodeEnter.append("circle")
+                     .attr("r", 1e-6);
+                     //.style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+
+            nodeEnter.append("text")
+                     .attr("x", function(d) { if (d.parent === undefined) return 0; return 10; } )
+                     .attr("dy", ".35em")
+                     .attr("transform", function(d) { if (d.parent === undefined) return "rotate(270)";
+                                                       return d.x < 180 ? "translate(0)" : "rotate(180)translate(-" + (d.name.length + 50)  + ")"; })
+//                     .attr("font-size", function(d) {
+//                        if (d.parent === undefined) {
+//                            return 140
+//                        } else {
+//                            return 135
+//                        }
+//                    })
+                     .style("text-anchor", function(d) {
+                            if (d.parent === undefined) {
+                                return "middle";
+                            }
+                            return "start"; })
+                     .text(function(d) { return d.name; })
+                     .style("fill-opacity", 1e-6);
+
+            // Transition nodes to their new position.
+            var nodeUpdate = node.transition()
+                                 .duration(duration)
+                                 .attr("transform", function(d) { return "rotate(" + (d.x - 90) + ")translate(" + d.y + ")"; })
+
+            nodeUpdate.select("circle")
+                      .attr("r", function(Z) {
+                            if ( Z.parent === undefined ) {
+                                return 90
+                            } else {
+                                return 4.5
+                            }
+                        });
+                      //.style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+
+            nodeUpdate.select("text")
+                      .style("fill-opacity", 1);
+
+            //
+            // TODO: appropriate transform
+            var nodeExit = node.exit().transition()
+                               .duration(duration)
+                  //.attr("transform", function(d) { return "diagonal(" + source.y + "," + source.x + ")"; })
+                  .remove();
+
+            nodeExit.select("circle")
+                    .attr("r", 1e-6);
+
+            nodeExit.select("text")
+                    .style("fill-opacity", 1e-6);
+
+            // Update the links…
+            var link = canvas.selectAll("path.link")
+                             .data(links, function(d) { return d.target.id; });
+
+            // Enter any new links at the parent's previous position.
+            link.enter().insert("path", "g")
+                        .attr("class", "link")
+                        .attr("d", function(d) {
+                            var o = {x: source.x0, y: source.y0};
+                            return diagonal({source: o, target: o});
+                        });
+
+            // Transition links to their new position.
+            link.transition()
+                .duration(duration)
+                .attr("d", diagonal);
+
+            // Transition exiting nodes to the parent's new position.
+            link.exit().transition()
+              .duration(duration)
+              .attr("d", function(d) {
+                  var o = {x: source.x, y: source.y};
+                  return diagonal({source: o, target: o});
+              })
+              .remove();
+
+//            //var source = root;
+//            var nodes = tree.nodes(treeRoot).reverse();
+//            var links = tree.links(nodes);
+//
+//
+//            var diagonal = d3.svg.diagonal()
+//    .projection(function(d) { return [d.y, d.x]; });
+//
+//              var link = svg.selectAll(".link")
+//                .data(nodes)
+//                .enter().append("path")
+//                  .attr("class", "link")
+//                  .attr("d", function(d) {
+//                    var o = {x: source.x0, y: source.y0};
+//                    return diagonal({source: o, target: o});
+//                  });
+//
+//
+//              link.transition()
+//                //.duration(100000)
+//                .attr("d", function(d) {
+//                    if (d.parent === undefined) {
+//                        return "M" + project(d.x, d.y);
+//                    }
+//
+//                    return "M" + project(d.x, d.y)
+//                        + "C" + project(d.x, (d.y + d.parent.y) / 2)
+//                        + " " + project(d.parent.x, (d.y + d.parent.y) / 2)
+//                        + " " + project(d.parent.x, d.parent.y);
+//                  });
+//
+//
 //            function project(x, y) {
 //                var angle = (x - 90) / 180 * Math.PI, radius = y;
-//                return [radius * Math.cos(angle), radius * Math.sin(angle)];
+//                return [radius * Math.cos(angle)+300, radius * Math.sin(angle)+400];
 //            }
+//
+////            nodes.forEach(function(d) { d.y = d.depth * 80; });
+//
+//            var node = svg.selectAll("g.node")
+//                .data(nodes, function(d) { return d.id || (d.id = ++i); });
+//
+//            var nodeEnter = node.enter().append("g")
+//            //var node = svg.selectAll("g.node")
+//            //                .data(nodes)
+//            //          .enter().append("g")
+//                .attr("class", function(d) { return "node";  }) // + (d.children ? " node--internal" : " node--leaf");
+//                //.attr("transform", function(d) { return "translate(" + project(d.x, d.y) + ")"; })
+//                .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
+//                .on("click", nodeClick);
+//
+//              nodeEnter.append("circle")
+//                  .attr("r", function(Z) {
+//                        if ( Z.parent === undefined ) {
+//                            return 90
+//                        } else {
+//                            return 4.5
+//                        }
+//                    });
+//
+//              nodeEnter.append("text")
+//                  .attr("dy", ".314em")
+//                  .attr("x", function(d) { return d.x < 180 ? 6 : -6; })
+//                  .attr("font-size", function(d) {
+//                        if (d.parent === undefined) {
+//                            return 20
+//                        } else {
+//                            return 15
+//                        }
+//                    })
+//                  .style("text-anchor", function(d) {
+//                    if (d.parent === undefined) {
+//                        return "middle"
+//                    }
+//                    return d.x < 180 ? "start" : "end"; })
+//                  .attr("transform", function(d) {
+//                     if (d.parent === undefined) {
+//                        return null
+//                     }
+//                     return "rotate(" + (d.x < 180 ? d.x - 90 : d.x + 90) + ")"; })
+//                  .text(function(d) { return d.name; });
+//
+//// Transition nodes to their new position.
+//  var nodeUpdate = node.transition()
+//      .duration(duration)
+//      .attr("transform", function(d) { return "translate(" + project(d.x, d.y) + ")"; });
+//      //.attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; });
+//
+////  nodeUpdate.select("circle")
+////      .attr("r", 4.5)
+////      .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+//
+////  nodeUpdate.select("text")
+////      .style("fill-opacity", 1);
+//
+//
+//var nodeExit = node.exit().transition()
+//      .duration(duration)
+//      //.attr("transform", function(d) { return "diagonal(" + source.y + "," + source.x + ")"; })
+//      .remove();
 
-              var link = svg.selectAll(".link")
-                            .data(nodes)
-                            .enter().append("path")
-                              .attr("class", "link")
-                              .attr("d", function(d) {
-                                if (d.parent === undefined) {
-                                    return "M" + project(d.x, d.y);
-                                }
 
-                                return "M" + project(d.x, d.y)
-                                    + "C" + project(d.x, (d.y + d.parent.y) / 2)
-                                    + " " + project(d.parent.x, (d.y + d.parent.y) / 2)
-                                    + " " + project(d.parent.x, d.parent.y);
-                              });
-
-            var node = svg.selectAll("g.node")
-                .data(nodes)
-                .enter().append("g")
-                  .attr("class", function(d) { return "node" + (d.children ? " node--internal" : " node--leaf"); })
-                  .attr("transform", function(d) { return "translate(" + project(d.x, d.y) + ")"; });
-
-              node.append("circle")
-                  .attr("r", function(Z) {
-                        if ( Z.parent === undefined ) {
-                            return 100
-                        } else {
-                            return 4.5
-                        }
-                    });
-
-              node.append("text")
-                  .attr("dy", ".31em")
-                  .attr("x", function(d) { return d.x < 180 === !d.children ? 6 : -6; })
-                  .attr("font-size", function(d) {
-                        if (d.parent === undefined) {
-                            return 20
-                        } else {
-                            return 15
-                        }
-                    })
-                  .style("text-anchor", function(d) {
-                    if (d.parent === undefined) {
-                        return "middle"
-                    }
-                    return d.x < 180 === !d.children ? "start" : "end"; })
-                  .attr("transform", function(d) {
-                     if (d.parent === undefined) {
-                        return null
-                     }
-                     return "rotate(" + (d.x < 180 ? d.x - 90 : d.x + 90) + ")"; })
-                  .text(function(d) { return d.name; });
+            nodes.forEach(function(d) {
+                d.x0 = d.x;
+                d.y0 = d.y;
+            });
         }
 
         var hash = window.location.hash.substring(1);
@@ -337,6 +519,22 @@ function createTeamPresentation() {
             {
                 showMainTree();
             }
+        }
+
+        function nodeClick(d) {
+
+        if ( d.level <= 1 )
+            return;
+
+        if (d.children) {
+            d._children = d.children;
+            d.children = null;
+        } else {
+            d.children = d._children;
+            d._children = null;
+        }
+
+        update(d);
         }
     } );
 }

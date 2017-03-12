@@ -49,19 +49,20 @@ text {
     stroke-width: 5px;
 }
 
-/*
 .node {
   cursor: pointer;
+  fill: #aaa;
 }
 
 .node circle {
-  fill: #fff;
+  fill: #aaa;
   stroke: steelblue;
   stroke-width: 1.5px;
 }
 
 .node text {
-  font: 10px sans-serif;
-} */
+  font: 15px sans-serif;
+  fill: #000;
+}
 
 /* http://www.findtheconversation.com/wp-content/themes/conversation_theme/style.css?ver=1 */

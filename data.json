@@ -3,15 +3,13 @@
      "member2" :  { "fullname" : "RK 10000", "components" : [ "c3", "c2", "c8" ], "connections" : [ "p2", "p22", "p8" ] },
      "member3"  :  { "fullname" : "R K3", "components" : [ "c4", "c2", "c9" ], "connections" : [ "p3", "p2", "p9" ] },
      "member45" : { "fullname" : "R K4", "components" : [ "c5", "c2", "c10" ], "connections" : [ "p4", "p2", "p10" ] },
-     "member5" : { "fullname" : "R K5", "components" : [ "c6", "c11 morgan direct" ], "connections" : [ "p5", "p19", "p11" ] } },
+     "member5" : { "fullname" : "R K5", "components" : [ "c6", "c11 morgan direct" ], "connections" : [ "p5", "p19", "p11" ] }
+  },
   "components" : {
     "c1": {
-      "applications": {
-        "application1": {
-          "business": "credit"
-        }
+      "fullname" : "the full name of c1",
+      "applications": [ "application1", "application2", "application3" ]
       }
-    }
   },
   "connections" : {
     "p1": {
@@ -21,6 +19,9 @@
         "p3"
       ]
     }
+  },
+  "applications" : {
+
   }
 }
 

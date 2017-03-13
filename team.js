@@ -40,8 +40,8 @@ function createTeamPresentation() {
 
         // Component&Connection nodes
 
-        components = d3.set( d3.merge( components ) ).values().map( function(d) { return { name:d, type: "component" } } );
-        connections = d3.set( d3.merge( connections ) ).values().map( function(d) { return { name:d, type: "connection "} } );
+        components = d3.set( d3.merge( components ) ).values().map( function(d) { return { name:d, type: "components" } } );
+        connections = d3.set( d3.merge( connections ) ).values().map( function(d) { return { name:d, type: "connections"} } );
 
         var components_x = d3.scale.linear()
             .domain([0, components.length ])
@@ -100,7 +100,8 @@ function createTeamPresentation() {
                 .attr("class", "outer_node")
                 .attr("transform", function(d) { return "rotate(" + ( d.value.x - 90 ) + ")translate(" + d.value.y + ")"; })
                 .on("mouseover", mouseover)
-                .on("mouseout", mouseout);
+                .on("mouseout", mouseout)
+                .on("click", mouseclick);
 
             onode.append("circle")
                 .attr("class", "outer_node")
@@ -220,6 +221,53 @@ function createTeamPresentation() {
                                       .attr("d", diagonal);
         }
 
+        function getTreeDef( hashDetails ) {
+
+            if ( hashDetails[0] == "members" ) {
+                treeRoot = { name : jsonData[hashDetails[0]][hashDetails[1]].fullname, level : 0 };
+                var children = [];
+                var connections = jsonData[hashDetails[0]][hashDetails[1]].connections;
+                for ( key in connections ) {
+                    var connectionName = connections[key];
+                    var connectionsOfConnection = [];
+                    if ( connectionName in jsonData["connections"]) {
+                        var business = jsonData["connections"][connectionName].business;
+
+                        for ( cKey in jsonData["connections"][connectionName].connections) {
+                            connectionsOfConnection.push({ name: jsonData["connections"][connectionName].connections[cKey], level : 3, children : [] } );
+                        }
+                    }
+                    else {
+                        var business = "unset";
+                    }
+
+                    children.push( { name: business, level : 1, children :
+                                        [ { name: connectionName, level : 2, children : connectionsOfConnection } ] } );
+                }
+                treeRoot[ 'children'] = children ;
+                return treeRoot;
+            }
+
+            if ( hashDetails[0] == "components" ) {
+                treeRoot = { name : jsonData[hashDetails[0]][hashDetails[1]].fullname, level : 0 };
+                var children = [];
+                var applications = jsonData[hashDetails[0]][hashDetails[1]].applications;
+                for ( key in connections ) {
+                    var applicationName = applications[key];
+                    children.push( { name: "unknown", level : 1, children :
+                                        [ { name: applicationName, level : 2, children : [] } ] } );
+                }
+                treeRoot[ 'children'] = children ;
+                return treeRoot;
+            }
+
+            if ( hashDetails[0] == "connections" ) {
+                treeRoot = { name : hashDetails[1], level : 0, children : [] };
+                return treeRoot;
+            }
+        }
+
+
         function showHashed( hash ) {
             d3.select("#mainTree").remove();
             d3.selectAll("#hash").remove();
@@ -228,41 +276,7 @@ function createTeamPresentation() {
             if ( !( hashDetails[0] in jsonData ) || !( hashDetails[1] in jsonData[ hashDetails[0]] ) )
                 return;
 
-            treeRoot = { name : jsonData[hashDetails[0]][hashDetails[1]].fullname, level : 0 };
-            if ( hashDetails[0] == "members" ) {
-                var children = [];
-                var connections = jsonData[hashDetails[0]][hashDetails[1]].connections;
-                for ( key in connections ) {
-                    var connectionName = connections[key];
-                    if ( connectionName in jsonData["connections"]) {
-                        var business = jsonData["connections"][connectionName].business;
-                    }
-                    else {
-                        var business = "unset";
-                    }
-
-                    children.push( { name: business, level : 1, children :
-                                        [ { name: connectionName, level : 2, children : [
-                                                                            { name: 'test', level : 3, children : [] },
-                                                                            { name: 'test1', level : 3, children : [] },
-                                                                            { name: 'test2', level : 3, children : [] },
-                                                                            { name: 'test', level : 3, children : [] },
-                                                                            { name: 'test1', level : 3, children : [] },
-                                                                            { name: 'test2', level : 3, children : [] },
-                                                                            { name: 'test', level : 3, children : [] },
-                                                                            { name: 'test1', level : 3, children : [] },
-                                                                            { name: 'test2', level : 3, children : [] },
-                                                                            { name: 'test', level : 3, children : [] },
-                                                                            { name: 'test1', level : 3, children : [] },
-                                                                            { name: 'test2', level : 3, children : [] },
-                                                                            { name: 'test', level : 3, children : [] },
-                                                                            { name: 'test1', level : 3, children : [] },
-                                                                            { name: 'test2', level : 3, children : [] },
-                                                                            { name: 'test3', level : 3, children : [] },
-                                                                             ] } ] } );
-                }
-                treeRoot[ 'children'] = children;
-            }
+            treeRoot = getTreeDef( hashDetails );
 
             function collapse(d) {
                 if ( d.children ) {
@@ -323,8 +337,8 @@ function createTeamPresentation() {
             nodeEnter.append("text")
                      .attr("x", function(d) { if (d.parent === undefined) return 0; return 10; } )
                      .attr("dy", ".35em")
-                     .attr("transform", function(d) { if (d.parent === undefined) return "rotate(270)";
-                                                       return d.x < 180 ? "translate(0)" : "rotate(180)translate(-" + (d.name.length + 50)  + ")"; })
+                     .attr("transform", function(d) { if (d.parent === undefined) return "rotate(0)";
+                                                      return d.x < 180 ? "translate(0)" : "rotate(180)translate(-" + (d.name.length + 50)  + ")"; })
 //                     .attr("font-size", function(d) {
 //                        if (d.parent === undefined) {
 //                            return 140
@@ -343,7 +357,8 @@ function createTeamPresentation() {
             // Transition nodes to their new position.
             var nodeUpdate = node.transition()
                                  .duration(duration)
-                                 .attr("transform", function(d) { return "rotate(" + (d.x - 90) + ")translate(" + d.y + ")"; })
+                                 .attr("transform", function(d) { if (d.parent === undefined) return "rotate(0)";
+                                                                  return "rotate(" + (d.x - 90) + ")translate(" + d.y + ")"; })
 
             nodeUpdate.select("circle")
                       .attr("r", function(Z) {
@@ -360,10 +375,11 @@ function createTeamPresentation() {
 
             //
             // TODO: appropriate transform
-            var nodeExit = node.exit().transition()
+            var nodeExit = node.exit()
+                               .transition()
                                .duration(duration)
-                  //.attr("transform", function(d) { return "diagonal(" + source.y + "," + source.x + ")"; })
-                  .remove();
+                               //.attr("transform", function(d) { return "diagonal(" + source.y + "," + source.x + ")"; })
+                               .remove();
 
             nodeExit.select("circle")
                     .attr("r", 1e-6);
@@ -396,108 +412,6 @@ function createTeamPresentation() {
                   return diagonal({source: o, target: o});
               })
               .remove();
-
-//            //var source = root;
-//            var nodes = tree.nodes(treeRoot).reverse();
-//            var links = tree.links(nodes);
-//
-//
-//            var diagonal = d3.svg.diagonal()
-//    .projection(function(d) { return [d.y, d.x]; });
-//
-//              var link = svg.selectAll(".link")
-//                .data(nodes)
-//                .enter().append("path")
-//                  .attr("class", "link")
-//                  .attr("d", function(d) {
-//                    var o = {x: source.x0, y: source.y0};
-//                    return diagonal({source: o, target: o});
-//                  });
-//
-//
-//              link.transition()
-//                //.duration(100000)
-//                .attr("d", function(d) {
-//                    if (d.parent === undefined) {
-//                        return "M" + project(d.x, d.y);
-//                    }
-//
-//                    return "M" + project(d.x, d.y)
-//                        + "C" + project(d.x, (d.y + d.parent.y) / 2)
-//                        + " " + project(d.parent.x, (d.y + d.parent.y) / 2)
-//                        + " " + project(d.parent.x, d.parent.y);
-//                  });
-//
-//
-//            function project(x, y) {
-//                var angle = (x - 90) / 180 * Math.PI, radius = y;
-//                return [radius * Math.cos(angle)+300, radius * Math.sin(angle)+400];
-//            }
-//
-////            nodes.forEach(function(d) { d.y = d.depth * 80; });
-//
-//            var node = svg.selectAll("g.node")
-//                .data(nodes, function(d) { return d.id || (d.id = ++i); });
-//
-//            var nodeEnter = node.enter().append("g")
-//            //var node = svg.selectAll("g.node")
-//            //                .data(nodes)
-//            //          .enter().append("g")
-//                .attr("class", function(d) { return "node";  }) // + (d.children ? " node--internal" : " node--leaf");
-//                //.attr("transform", function(d) { return "translate(" + project(d.x, d.y) + ")"; })
-//                .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
-//                .on("click", nodeClick);
-//
-//              nodeEnter.append("circle")
-//                  .attr("r", function(Z) {
-//                        if ( Z.parent === undefined ) {
-//                            return 90
-//                        } else {
-//                            return 4.5
-//                        }
-//                    });
-//
-//              nodeEnter.append("text")
-//                  .attr("dy", ".314em")
-//                  .attr("x", function(d) { return d.x < 180 ? 6 : -6; })
-//                  .attr("font-size", function(d) {
-//                        if (d.parent === undefined) {
-//                            return 20
-//                        } else {
-//                            return 15
-//                        }
-//                    })
-//                  .style("text-anchor", function(d) {
-//                    if (d.parent === undefined) {
-//                        return "middle"
-//                    }
-//                    return d.x < 180 ? "start" : "end"; })
-//                  .attr("transform", function(d) {
-//                     if (d.parent === undefined) {
-//                        return null
-//                     }
-//                     return "rotate(" + (d.x < 180 ? d.x - 90 : d.x + 90) + ")"; })
-//                  .text(function(d) { return d.name; });
-//
-//// Transition nodes to their new position.
-//  var nodeUpdate = node.transition()
-//      .duration(duration)
-//      .attr("transform", function(d) { return "translate(" + project(d.x, d.y) + ")"; });
-//      //.attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; });
-//
-////  nodeUpdate.select("circle")
-////      .attr("r", 4.5)
-////      .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
-//
-////  nodeUpdate.select("text")
-////      .style("fill-opacity", 1);
-//
-//
-//var nodeExit = node.exit().transition()
-//      .duration(duration)
-//      //.attr("transform", function(d) { return "diagonal(" + source.y + "," + source.x + ")"; })
-//      .remove();
-
 
             nodes.forEach(function(d) {
                 d.x0 = d.x;
